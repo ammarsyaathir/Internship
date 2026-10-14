@@ -1,0 +1,1252 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>InternTrack MY — Smart Internship Tracker</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              50: '#eef2ff',
+              100: '#e0e7ff',
+              500: '#6366f1',
+              600: '#4f46e5',
+              700: '#4338ca',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* Hide scrollbars for horizontal pill bars while keeping scrollability */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    /* Smooth slide-up animation for mobile sheets */
+    @keyframes slideUp {
+      from { transform: translateY(100%); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+    .animate-slide-up {
+      animation: slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+    /* Tap highlight removal on mobile */
+    * {
+      -webkit-tap-highlight-color: transparent;
+    }
+  </style>
+</head>
+
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 font-sans min-h-screen pb-28 transition-colors duration-200">
+
+  <!-- Top Navigation & Sync Status Header -->
+  <header class="sticky top-0 z-30 backdrop-blur-md bg-white/85 dark:bg-slate-900/85 border-b border-slate-200 dark:border-slate-800 transition-colors">
+    <div class="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between gap-2">
+      <!-- App Brand & Sync Pill -->
+      <div class="flex items-center gap-2.5">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white shadow-md shadow-indigo-500/20 shrink-0">
+          <i class="fa-solid fa-briefcase text-lg"></i>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="font-bold text-base sm:text-lg tracking-tight text-slate-900 dark:text-white leading-none">InternTrack</h1>
+            <button onclick="openSettingsModal('connection')" id="syncBadge" class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium bg-amber-100 text-amber-800 dark:bg-amber-950/70 dark:text-amber-300 border border-amber-300/60 dark:border-amber-800/70 transition hover:opacity-80">
+              <span id="syncDot" class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+              <span id="syncText">Local Mode</span>
+            </button>
+          </div>
+          <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Tap badge to configure Google Sheets sync</p>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="flex items-center gap-1.5 sm:gap-2">
+        <!-- Manual Sync Button (shown when URL is connected) -->
+        <button id="refreshBtn" onclick="syncFromGoogleSheet(true)" title="Sync with Google Sheets" class="hidden p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-indigo-50 dark:hover:bg-slate-700 active:scale-95 transition">
+          <i id="refreshIcon" class="fa-solid fa-rotate text-sm"></i>
+        </button>
+
+        <!-- Export CSV Button -->
+        <button onclick="exportToCSV()" title="Export CSV" class="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 active:scale-95 transition flex items-center gap-1.5 text-xs font-medium">
+          <i class="fa-solid fa-file-csv text-emerald-600 dark:text-emerald-400 text-sm"></i>
+          <span class="hidden sm:inline">Export CSV</span>
+        </button>
+
+        <!-- Google Sheets Setup / Settings -->
+        <button onclick="openSettingsModal('connection')" title="Google Sheets Setup" class="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 active:scale-95 transition relative">
+          <i class="fa-solid fa-database text-indigo-500 text-sm"></i>
+        </button>
+
+        <!-- Dark/Light Theme Toggle -->
+        <button onclick="toggleTheme()" title="Toggle Theme" class="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 active:scale-95 transition">
+          <i id="themeIcon" class="fa-solid fa-sun text-amber-400 text-sm"></i>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content Container -->
+  <main class="max-w-3xl mx-auto px-4 pt-4 space-y-4">
+
+    <!-- Sample Data Notice Banner (Only visible if sample data is active) -->
+    <div id="sampleBanner" class="hidden bg-indigo-50/90 dark:bg-indigo-950/50 border border-indigo-200 dark:border-indigo-800/70 rounded-2xl p-3 flex items-center justify-between gap-3 text-xs">
+      <div class="flex items-center gap-2.5 text-indigo-900 dark:text-indigo-200">
+        <i class="fa-solid fa-wand-magic-sparkles text-indigo-500 text-base"></i>
+        <span>Showing <strong>3 sample internship applications</strong> so you can test the cards & filters right away.</span>
+      </div>
+      <button onclick="clearSampleData()" class="shrink-0 px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-800 text-rose-600 dark:text-rose-400 font-semibold border border-slate-200 dark:border-slate-700 hover:bg-rose-50 transition">
+        Clear Samples
+      </button>
+    </div>
+
+    <!-- KPI Dashboard Summary Cards -->
+    <section class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+      <div class="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-3.5 shadow-sm">
+        <div class="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 font-medium">
+          <span>Total Tracked</span>
+          <span class="w-7 h-7 rounded-lg bg-indigo-50 dark:bg-indigo-950/70 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+            <i class="fa-solid fa-paper-plane text-xs"></i>
+          </span>
+        </div>
+        <p id="kpiTotal" class="text-2xl font-extrabold text-slate-900 dark:text-white mt-1">0</p>
+        <p id="kpiAppliedSub" class="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">0 active applications</p>
+      </div>
+
+      <div class="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-3.5 shadow-sm">
+        <div class="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 font-medium">
+          <span>Interviews</span>
+          <span class="w-7 h-7 rounded-lg bg-amber-50 dark:bg-amber-950/70 text-amber-600 dark:text-amber-400 flex items-center justify-center">
+            <i class="fa-solid fa-comments text-xs"></i>
+          </span>
+        </div>
+        <p id="kpiInterview" class="text-2xl font-extrabold text-amber-600 dark:text-amber-400 mt-1">0</p>
+        <p id="kpiAssessmentSub" class="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">+ 0 in assessment</p>
+      </div>
+
+      <div class="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-3.5 shadow-sm">
+        <div class="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 font-medium">
+          <span>Offers</span>
+          <span class="w-7 h-7 rounded-lg bg-emerald-50 dark:bg-emerald-950/70 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+            <i class="fa-solid fa-trophy text-xs"></i>
+          </span>
+        </div>
+        <p id="kpiOffered" class="text-2xl font-extrabold text-emerald-600 dark:text-emerald-400 mt-1">0</p>
+        <p id="kpiMaxAllowance" class="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">Top: N/A</p>
+      </div>
+
+      <div class="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-3.5 shadow-sm">
+        <div class="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 font-medium">
+          <span>Response Rate</span>
+          <span class="w-7 h-7 rounded-lg bg-purple-50 dark:bg-purple-950/70 text-purple-600 dark:text-purple-400 flex items-center justify-center">
+            <i class="fa-solid fa-chart-line text-xs"></i>
+          </span>
+        </div>
+        <p id="kpiRate" class="text-2xl font-extrabold text-purple-600 dark:text-purple-400 mt-1">0%</p>
+        <p class="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">OA / Interview / Offer</p>
+      </div>
+    </section>
+
+    <!-- Search & Work Mode Filter Row -->
+    <section class="flex flex-col sm:flex-row gap-2.5">
+      <div class="relative flex-1">
+        <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+        <input
+          type="text"
+          id="searchInput"
+          oninput="renderApplications()"
+          placeholder="Search company, role, city, or tech stack..."
+          class="w-full pl-9 pr-9 py-2.5 text-sm rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition"
+        />
+        <button id="clearSearchBtn" onclick="clearSearch()" class="hidden absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+          <i class="fa-solid fa-circle-xmark"></i>
+        </button>
+      </div>
+
+      <!-- Work Mode Filter + Sort -->
+      <div class="flex gap-2">
+        <select
+          id="placeFilter"
+          onchange="renderApplications()"
+          class="flex-1 sm:w-36 px-3 py-2.5 text-xs font-medium rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        >
+          <option value="All">All Modes (Place)</option>
+          <option value="On-site">🏢 On-site</option>
+          <option value="Hybrid">🔄 Hybrid</option>
+          <option value="Remote">🏠 Remote</option>
+        </select>
+
+        <select
+          id="sortOrder"
+          onchange="renderApplications()"
+          class="flex-1 sm:w-36 px-3 py-2.5 text-xs font-medium rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        >
+          <option value="newest">Newest First</option>
+          <option value="oldest">Oldest First</option>
+          <option value="company">Company (A-Z)</option>
+          <option value="followup">Follow-up Soon</option>
+        </select>
+      </div>
+    </section>
+
+    <!-- Status Filter Pills (Horizontal Scroll on Mobile) -->
+    <section class="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1" id="statusFilterBar">
+      <!-- Dynamically populated with counts -->
+    </section>
+
+    <!-- Application Cards List -->
+    <section id="appList" class="space-y-3">
+      <!-- Populated by JavaScript -->
+    </section>
+
+  </main>
+
+  <!-- Floating Action Button (FAB) for Smartphone Thumb Reach -->
+  <div class="fixed bottom-5 right-5 z-20 flex items-center gap-2">
+    <button
+      onclick="openAppModal()"
+      class="group flex items-center gap-2.5 bg-indigo-600 hover:bg-indigo-500 active:scale-95 text-white font-semibold px-5 py-3.5 rounded-2xl shadow-lg shadow-indigo-600/30 transition-all"
+    >
+      <i class="fa-solid fa-plus text-base transition-transform group-hover:rotate-90"></i>
+      <span class="text-sm">Add Internship</span>
+    </button>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toastContainer" class="fixed bottom-20 left-1/2 -translate-x-1/2 z-50 pointer-events-none flex flex-col items-center gap-2 w-full max-w-xs px-4"></div>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL 1: ADD / EDIT INTERNSHIP APPLICATION (Bottom Sheet on Mobile)       -->
+  <!-- ========================================================================= -->
+  <div id="appModal" class="fixed inset-0 z-40 bg-slate-950/60 backdrop-blur-xs hidden flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="bg-white dark:bg-slate-900 border-t sm:border border-slate-200 dark:border-slate-800 w-full max-w-lg rounded-t-3xl sm:rounded-2xl shadow-2xl max-h-[92vh] flex flex-col animate-slide-up">
+      <!-- Modal Header -->
+      <div class="px-5 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between shrink-0">
+        <div>
+          <h2 id="modalTitle" class="text-base font-bold text-slate-900 dark:text-white">Add Internship Application</h2>
+          <p class="text-xs text-slate-500 dark:text-slate-400">Saved locally & synced to Google Sheets if connected</p>
+        </div>
+        <button onclick="closeAppModal()" class="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-800 dark:hover:text-white flex items-center justify-center">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <!-- Modal Form Body -->
+      <form id="appForm" onsubmit="handleFormSubmit(event)" class="p-5 overflow-y-auto space-y-3.5 text-sm">
+        <input type="hidden" id="appId" />
+
+        <!-- Company Name & Role -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Company Name <span class="text-rose-500">*</span></label>
+            <input type="text" id="company" required placeholder="e.g., Grab, Petronas, Shopee" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Internship Role <span class="text-rose-500">*</span></label>
+            <input type="text" id="role" required placeholder="e.g., Software Engineering Intern" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+          </div>
+        </div>
+
+        <!-- Location (City/State) & Place (Work Mode) -->
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Location (City/Area)</label>
+            <input type="text" id="location" placeholder="e.g., Kuala Lumpur, Cyberjaya" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Place (Work Mode)</label>
+            <select id="place" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+              <option value="On-site">🏢 On-site</option>
+              <option value="Hybrid">🔄 Hybrid</option>
+              <option value="Remote">🏠 Remote</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Status & Monthly Allowance -->
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Application Status</label>
+            <select id="status" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+              <option value="Wishlist">⭐ Wishlist</option>
+              <option value="Applied" selected>📨 Applied</option>
+              <option value="Assessment">💻 Assessment / OA</option>
+              <option value="Interview">🗣️ Interview</option>
+              <option value="Offered">🎉 Offered</option>
+              <option value="Rejected">❌ Rejected</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Monthly Allowance</label>
+            <input type="text" id="allowance" placeholder="e.g., RM 1,200" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+          </div>
+        </div>
+
+        <!-- Apply Timestamp & Follow-up / Interview Date -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Apply Timestamp</label>
+            <input type="datetime-local" id="timestampInput" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-xs" />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Follow-Up / Interview Date</label>
+            <input type="date" id="followUpDate" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-xs" />
+          </div>
+        </div>
+
+        <!-- Source / Job Posting URL / HR Contact -->
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Portal / Job Link / HR Email</label>
+          <input type="text" id="source" placeholder="e.g., https://linkedin.com/jobs/... or hr@company.com" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+        </div>
+
+        <!-- Notes -->
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Notes (Tech stack, requirements, PIC name, remarks)</label>
+          <textarea id="notes" rows="3" placeholder="e.g., Requires React & Node.js. Sent Resume v2. HR PIC: Sarah." class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
+        </div>
+
+        <!-- Submit & Cancel -->
+        <div class="pt-2 flex gap-2.5">
+          <button type="button" onclick="closeAppModal()" class="w-1/3 py-3 rounded-xl font-semibold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 transition">
+            Cancel
+          </button>
+          <button type="submit" id="saveAppBtn" class="w-2/3 py-3 rounded-xl font-semibold text-white bg-indigo-600 hover:bg-indigo-500 shadow-md shadow-indigo-600/20 transition flex items-center justify-center gap-2">
+            <i class="fa-solid fa-check"></i>
+            <span>Save Application</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL 2: GOOGLE SHEETS SYNC SETUP & APPS SCRIPT GENERATOR                 -->
+  <!-- ========================================================================= -->
+  <div id="settingsModal" class="fixed inset-0 z-40 bg-slate-950/60 backdrop-blur-xs hidden flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="bg-white dark:bg-slate-900 border-t sm:border border-slate-200 dark:border-slate-800 w-full max-w-2xl rounded-t-3xl sm:rounded-2xl shadow-2xl max-h-[92vh] flex flex-col animate-slide-up">
+      <!-- Header -->
+      <div class="px-5 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between shrink-0">
+        <div class="flex items-center gap-2.5">
+          <div class="w-9 h-9 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+            <i class="fa-solid fa-table text-lg"></i>
+          </div>
+          <div>
+            <h2 class="text-base font-bold text-slate-900 dark:text-white">Google Sheets Database Setup</h2>
+            <p class="text-xs text-slate-500 dark:text-slate-400">Connect your phone directly to your Google Sheet</p>
+          </div>
+        </div>
+        <button onclick="closeSettingsModal()" class="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-800 dark:hover:text-white flex items-center justify-center">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <!-- Modal Tabs -->
+      <div class="flex border-b border-slate-200 dark:border-slate-800 px-5 gap-4 text-xs font-semibold shrink-0">
+        <button onclick="switchSettingsTab('connection')" id="tabBtnConnection" class="py-3 border-b-2 border-indigo-600 text-indigo-600 dark:text-indigo-400 dark:border-indigo-400">
+          1. Connect Web App URL
+        </button>
+        <button onclick="switchSettingsTab('guide')" id="tabBtnGuide" class="py-3 border-b-2 border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300">
+          2. 4-Step Setup Guide & Apps Script Code
+        </button>
+      </div>
+
+      <!-- Tab 1: Connection Settings -->
+      <div id="tabConnection" class="p-5 overflow-y-auto space-y-4 text-sm">
+        <div class="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 space-y-2">
+          <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+            Google Apps Script Web App URL (`SCRIPT_URL`)
+          </label>
+          <input
+            type="url"
+            id="scriptUrlInput"
+            placeholder="https://script.google.com/macros/s/AKfycb.../exec"
+            class="w-full px-3.5 py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          />
+          <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+            Paste your deployed Google Apps Script URL above. When connected, every new internship, edit, or status change syncs with your Google Sheet while keeping a fast offline copy on your phone.
+          </p>
+        </div>
+
+        <div class="flex flex-wrap gap-2">
+          <button onclick="saveScriptUrl()" class="flex-1 py-2.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs transition flex items-center justify-center gap-2">
+            <i class="fa-solid fa-plug-circle-check"></i>
+            <span>Save & Connect URL</span>
+          </button>
+          <button onclick="pushLocalToGoogleSheet()" class="py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs transition flex items-center justify-center gap-2" title="Upload all current phone records into your Google Sheet">
+            <i class="fa-solid fa-cloud-arrow-up"></i>
+            <span>Push Local Data to Sheet</span>
+          </button>
+          <button onclick="disconnectScriptUrl()" class="py-2.5 px-3.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-rose-600 dark:text-rose-400 font-semibold text-xs hover:bg-rose-50 transition">
+            Disconnect
+          </button>
+        </div>
+
+        <!-- Backup & Restore JSON -->
+        <div class="pt-3 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs">
+          <span class="text-slate-500 dark:text-slate-400">Don't have a Google Sheet yet? Switch to the <strong>Setup Guide</strong> tab above!</span>
+          <button onclick="switchSettingsTab('guide')" class="text-indigo-600 dark:text-indigo-400 font-semibold hover:underline">
+            View Code & Guide &rarr;
+          </button>
+        </div>
+      </div>
+
+      <!-- Tab 2: 4-Step Guide & Copyable Apps Script Code -->
+      <div id="tabGuide" class="hidden p-5 overflow-y-auto space-y-4 text-xs leading-relaxed">
+        <ol class="space-y-2.5 text-slate-600 dark:text-slate-300 list-decimal list-inside">
+          <li>Create a new <strong>Google Sheet</strong> in your Google Drive.</li>
+          <li>Click <strong>Extensions &rarr; Apps Script</strong> in the top menu bar.</li>
+          <li>Delete any existing code inside <code>Code.gs</code> and paste the complete script below (it automatically creates the header columns for you!).</li>
+          <li>Click <strong>Deploy &rarr; New deployment</strong>, choose type <strong>Web app</strong>, set <em>Execute as</em> to <strong>Me</strong>, and set <em>Who has access</em> to <strong>Anyone</strong>. Copy the Web App URL and paste it in Tab 1!</li>
+        </ol>
+
+        <div class="relative">
+          <div class="flex items-center justify-between bg-slate-800 text-slate-200 px-3.5 py-2 rounded-t-xl text-[11px] font-mono">
+            <span>Code.gs (Google Apps Script)</span>
+            <button onclick="copyAppsScriptCode()" class="px-2.5 py-1 rounded bg-indigo-600 hover:bg-indigo-500 text-white font-sans font-semibold flex items-center gap-1.5">
+              <i class="fa-regular fa-copy"></i>
+              <span id="copyCodeBtnText">Copy Script Code</span>
+            </button>
+          </div>
+          <pre id="appsScriptCodeBlock" class="bg-slate-950 text-emerald-300 p-3.5 rounded-b-xl overflow-x-auto font-mono text-[11px] max-h-60 leading-normal select-all">function setupHeaders(sheet) {
+  if (sheet.getLastRow() === 0) {
+    sheet.appendRow([
+      'ID', 'Timestamp', 'Company', 'Role', 'Location',
+      'Place', 'Status', 'Allowance', 'Source', 'FollowUpDate', 'Notes'
+    ]);
+    sheet.getRange(1, 1, 1, 11).setFontWeight('bold');
+  }
+}
+
+function doGet() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  setupHeaders(sheet);
+  const rows = sheet.getDataRange().getValues();
+  rows.shift(); // Remove header row
+  const data = rows.filter(r => r[0]).map(r => ({
+    id: String(r[0]),
+    timestamp: String(r[1] || ''),
+    company: String(r[2] || ''),
+    role: String(r[3] || ''),
+    location: String(r[4] || ''),
+    place: String(r[5] || 'On-site'),
+    status: String(r[6] || 'Applied'),
+    allowance: String(r[7] || ''),
+    source: String(r[8] || ''),
+    followUpDate: String(r[9] || ''),
+    notes: String(r[10] || '')
+  }));
+  return ContentService.createTextOutput(JSON.stringify(data))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function doPost(e) {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  setupHeaders(sheet);
+  const body = JSON.parse(e.postData.contents);
+  const action = body.action;
+  const data = sheet.getDataRange().getValues();
+
+  if (action === 'add' || action === 'edit') {
+    let foundRow = -1;
+    for (let i = 1; i < data.length; i++) {
+      if (String(data[i][0]) === String(body.id)) {
+        foundRow = i + 1;
+        break;
+      }
+    }
+    const rowValues = [
+      body.id, body.timestamp, body.company, body.role, body.location,
+      body.place, body.status, body.allowance, body.source, body.followUpDate || '', body.notes
+    ];
+    if (foundRow > 0) {
+      sheet.getRange(foundRow, 1, 1, 11).setValues([rowValues]);
+    } else {
+      sheet.appendRow(rowValues);
+    }
+  } else if (action === 'updateStatus') {
+    for (let i = 1; i < data.length; i++) {
+      if (String(data[i][0]) === String(body.id)) {
+        sheet.getRange(i + 1, 7).setValue(body.status);
+        break;
+      }
+    }
+  } else if (action === 'delete') {
+    for (let i = 1; i < data.length; i++) {
+      if (String(data[i][0]) === String(body.id)) {
+        sheet.deleteRow(i + 1);
+        break;
+      }
+    }
+  } else if (action === 'bulkSync' && Array.isArray(body.items)) {
+    body.items.forEach(item => {
+      let exists = false;
+      for (let i = 1; i < data.length; i++) {
+        if (String(data[i][0]) === String(item.id)) { exists = true; break; }
+      }
+      if (!exists) {
+        sheet.appendRow([
+          item.id, item.timestamp, item.company, item.role, item.location,
+          item.place, item.status, item.allowance, item.source, item.followUpDate || '', item.notes
+        ]);
+      }
+    });
+  }
+
+  return ContentService.createTextOutput(JSON.stringify({ ok: true }))
+    .setMimeType(ContentService.MimeType.JSON);
+}</pre>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL 3: DELETE CONFIRMATION DIALOG (No native alert/confirm)             -->
+  <!-- ========================================================================= -->
+  <div id="deleteModal" class="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs hidden flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-sm w-full p-5 shadow-xl space-y-4">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-full bg-rose-100 dark:bg-rose-950 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0">
+          <i class="fa-solid fa-trash-can"></i>
+        </div>
+        <div>
+          <h3 class="font-bold text-slate-900 dark:text-white text-sm">Delete Application?</h3>
+          <p id="deleteModalSub" class="text-xs text-slate-500 dark:text-slate-400">This will remove the record from your tracker.</p>
+        </div>
+      </div>
+      <div class="flex gap-2 justify-end">
+        <button onclick="closeDeleteModal()" class="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+          Cancel
+        </button>
+        <button id="confirmDeleteBtn" class="px-4 py-2 rounded-xl text-xs font-semibold bg-rose-600 hover:bg-rose-500 text-white">
+          Delete
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- APPLICATION LOGIC (Vanilla JS + LocalStorage + Google Sheets Sync)        -->
+  <!-- ========================================================================= -->
+  <script>
+    const STORAGE_KEY = 'interntrack_my_apps_v2';
+    const SAMPLE_FLAG_KEY = 'interntrack_my_sample_loaded';
+    const SCRIPT_URL_KEY = 'interntrack_my_script_url';
+    const THEME_KEY = 'interntrack_my_theme';
+
+    const STATUS_LIST = ['All', 'Wishlist', 'Applied', 'Assessment', 'Interview', 'Offered', 'Rejected'];
+
+    const STATUS_STYLES = {
+      Wishlist: {
+        badge: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-slate-300 dark:border-slate-700',
+        icon: 'fa-star'
+      },
+      Applied: {
+        badge: 'bg-blue-50 text-blue-700 dark:bg-blue-950/80 dark:text-blue-300 border-blue-200 dark:border-blue-800',
+        icon: 'fa-paper-plane'
+      },
+      Assessment: {
+        badge: 'bg-purple-50 text-purple-700 dark:bg-purple-950/80 dark:text-purple-300 border-purple-200 dark:border-purple-800',
+        icon: 'fa-laptop-code'
+      },
+      Interview: {
+        badge: 'bg-amber-50 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300 border-amber-300 dark:border-amber-800',
+        icon: 'fa-comments'
+      },
+      Offered: {
+        badge: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/80 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800',
+        icon: 'fa-trophy'
+      },
+      Rejected: {
+        badge: 'bg-rose-50 text-rose-700 dark:bg-rose-950/80 dark:text-rose-300 border-rose-200 dark:border-rose-800',
+        icon: 'fa-circle-xmark'
+      }
+    };
+
+    const PLACE_BADGES = {
+      'On-site': '🏢 On-site',
+      'Hybrid': '🔄 Hybrid',
+      'Remote': '🏠 Remote'
+    };
+
+    // Starter Sample Data for First-Time Users
+    const INITIAL_SAMPLE_APPS = [
+      {
+        id: 'sample-1',
+        company: 'Grab Malaysia',
+        role: 'Software Engineering Intern (Frontend)',
+        location: 'Petaling Jaya, Selangor',
+        place: 'Hybrid',
+        status: 'Interview',
+        timestamp: '2025-02-18T10:30',
+        allowance: 'RM 1,500',
+        source: 'https://grab.careers',
+        followUpDate: '2025-03-05',
+        notes: 'Technical round on React, TypeScript & API state management. HR PIC: Aina.'
+      },
+      {
+        id: 'sample-2',
+        company: 'PETRONAS Digital',
+        role: 'Data & Cloud Engineering Intern',
+        location: 'KLCC, Kuala Lumpur',
+        place: 'On-site',
+        status: 'Applied',
+        timestamp: '2025-02-20T14:15',
+        allowance: 'RM 1,200',
+        source: 'LinkedIn Easy Apply',
+        followUpDate: '2025-03-10',
+        notes: 'Submitted tailored Resume_v3.pdf and university indemnity letter.'
+      },
+      {
+        id: 'sample-3',
+        company: 'PayNet (Payments Network Malaysia)',
+        role: 'Cybersecurity / FinTech Intern',
+        location: 'Bangsar South, KL',
+        place: 'Hybrid',
+        status: 'Assessment',
+        timestamp: '2025-02-22T09:00',
+        allowance: 'RM 1,500',
+        source: 'https://paynet.my/careers',
+        followUpDate: '2025-02-28',
+        notes: 'Completed HackerRank Online Assessment (2 SQL + 2 Python questions).'
+      }
+    ];
+
+    let applications = [];
+    let currentStatusFilter = 'All';
+    let scriptUrl = localStorage.getItem(SCRIPT_URL_KEY) || '';
+    let pendingDeleteId = null;
+
+    // =========================================================================
+    // INITIALIZATION & THEME
+    // =========================================================================
+    function initApp() {
+      // Load theme preference
+      const savedTheme = localStorage.getItem(THEME_KEY) || 'dark';
+      if (savedTheme === 'dark') {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+      updateThemeIcon();
+
+      // Load local applications or seed sample data on first run
+      const raw = localStorage.getItem(STORAGE_KEY);
+      const sampleLoaded = localStorage.getItem(SAMPLE_FLAG_KEY);
+
+      if (!raw && !sampleLoaded) {
+        applications = [...INITIAL_SAMPLE_APPS];
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(applications));
+        localStorage.setItem(SAMPLE_FLAG_KEY, 'true');
+      } else {
+        applications = JSON.parse(raw || '[]');
+      }
+
+      updateSyncStatusUI();
+      renderApplications();
+
+      // If Google Sheet URL is configured, fetch latest records in background
+      if (scriptUrl) {
+        syncFromGoogleSheet(false);
+      }
+    }
+
+    function toggleTheme() {
+      const isDark = document.documentElement.classList.toggle('dark');
+      localStorage.setItem(THEME_KEY, isDark ? 'dark' : 'light');
+      updateThemeIcon();
+    }
+
+    function updateThemeIcon() {
+      const icon = document.getElementById('themeIcon');
+      const isDark = document.documentElement.classList.contains('dark');
+      icon.className = isDark
+        ? 'fa-solid fa-sun text-amber-400 text-sm'
+        : 'fa-solid fa-moon text-indigo-600 text-sm';
+    }
+
+    // =========================================================================
+    // TOAST NOTIFICATION HELPER
+    // =========================================================================
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      const colors = {
+        success: 'bg-emerald-600 text-white',
+        error: 'bg-rose-600 text-white',
+        info: 'bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900'
+      };
+      toast.className = `${colors[type] || colors.info} px-4 py-2.5 rounded-xl shadow-lg text-xs font-semibold flex items-center gap-2 transition-all duration-300 opacity-0 translate-y-2`;
+      toast.innerHTML = `<i class="fa-solid ${type === 'success' ? 'fa-circle-check' : type === 'error' ? 'fa-triangle-exclamation' : 'fa-bolt'}"></i><span>${message}</span>`;
+      container.appendChild(toast);
+
+      requestAnimationFrame(() => {
+        toast.classList.remove('opacity-0', 'translate-y-2');
+      });
+
+      setTimeout(() => {
+        toast.classList.add('opacity-0', 'translate-y-2');
+        setTimeout(() => toast.remove(), 300);
+      }, 2600);
+    }
+
+    // =========================================================================
+    // STORAGE & GOOGLE SHEETS SYNC
+    // =========================================================================
+    function saveLocal() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(applications));
+      renderApplications();
+    }
+
+    function updateSyncStatusUI() {
+      const badge = document.getElementById('syncBadge');
+      const dot = document.getElementById('syncDot');
+      const text = document.getElementById('syncText');
+      const refreshBtn = document.getElementById('refreshBtn');
+
+      if (scriptUrl) {
+        badge.className = 'inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300 border border-emerald-300/60 dark:border-emerald-800 transition hover:opacity-80';
+        dot.className = 'w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse';
+        text.textContent = 'Google Sheets Synced';
+        refreshBtn.classList.remove('hidden');
+      } else {
+        badge.className = 'inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-amber-100 text-amber-800 dark:bg-amber-950/70 dark:text-amber-300 border border-amber-300/60 dark:border-amber-800/70 transition hover:opacity-80';
+        dot.className = 'w-1.5 h-1.5 rounded-full bg-amber-500';
+        text.textContent = 'Local Phone Storage';
+        refreshBtn.classList.add('hidden');
+      }
+    }
+
+    async function syncFromGoogleSheet(showNotification = true) {
+      if (!scriptUrl) return;
+      const icon = document.getElementById('refreshIcon');
+      icon.classList.add('fa-spin');
+
+      try {
+        const res = await fetch(scriptUrl);
+        const remoteData = await res.json();
+        if (Array.isArray(remoteData)) {
+          applications = remoteData;
+          saveLocal();
+          if (showNotification) showToast('Synced latest rows from Google Sheets!', 'success');
+        }
+      } catch (err) {
+        if (showNotification) showToast('Offline or invalid Apps Script URL. Using local cache.', 'error');
+      } finally {
+        icon.classList.remove('fa-spin');
+      }
+    }
+
+    async function sendToGoogleSheet(payload) {
+      if (!scriptUrl) return;
+      try {
+        await fetch(scriptUrl, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify(payload)
+        });
+      } catch (err) {
+        showToast('Saved on phone (Cloud sync will retry when online)', 'info');
+      }
+    }
+
+    async function pushLocalToGoogleSheet() {
+      if (!scriptUrl) {
+        showToast('Please paste & save your Apps Script URL first!', 'error');
+        return;
+      }
+      if (!applications.length) {
+        showToast('No local applications to push.', 'info');
+        return;
+      }
+      showToast('Uploading local applications to Google Sheet...', 'info');
+      await sendToGoogleSheet({ action: 'bulkSync', items: applications });
+      setTimeout(() => {
+        showToast('All local records pushed to Google Sheets!', 'success');
+        closeSettingsModal();
+      }, 900);
+    }
+
+    // =========================================================================
+    // RENDER DASHBOARD, FILTERS & APPLICATION CARDS
+    // =========================================================================
+    function renderApplications() {
+      // Toggle sample banner if any sample ID exists
+      const hasSample = applications.some(a => String(a.id).startsWith('sample-'));
+      document.getElementById('sampleBanner').classList.toggle('hidden', !hasSample);
+
+      // Update KPI Metrics
+      const total = applications.length;
+      const appliedActive = applications.filter(a => a.status !== 'Wishlist').length;
+      const interviews = applications.filter(a => a.status === 'Interview').length;
+      const assessments = applications.filter(a => a.status === 'Assessment').length;
+      const offers = applications.filter(a => a.status === 'Offered').length;
+      const positiveResponses = applications.filter(a => ['Assessment', 'Interview', 'Offered'].includes(a.status)).length;
+      const rate = appliedActive > 0 ? Math.round((positiveResponses / appliedActive) * 100) : 0;
+
+      // Calculate highest allowance
+      let maxRm = 0;
+      applications.forEach(a => {
+        const num = parseInt(String(a.allowance || '').replace(/[^0-9]/g, ''), 10);
+        if (!isNaN(num) && num > maxRm) maxRm = num;
+      });
+
+      document.getElementById('kpiTotal').textContent = total;
+      document.getElementById('kpiAppliedSub').textContent = `${appliedActive} submitted`;
+      document.getElementById('kpiInterview').textContent = interviews;
+      document.getElementById('kpiAssessmentSub').textContent = `+ ${assessments} in OA/Test`;
+      document.getElementById('kpiOffered').textContent = offers;
+      document.getElementById('kpiMaxAllowance').textContent = maxRm > 0 ? `Top: RM ${maxRm.toLocaleString()}` : 'Top: N/A';
+      document.getElementById('kpiRate').textContent = `${rate}%`;
+
+      // Render Status Filter Pills with Live Counts
+      const filterBar = document.getElementById('statusFilterBar');
+      filterBar.innerHTML = STATUS_LIST.map(st => {
+        const count = st === 'All' ? applications.length : applications.filter(a => a.status === st).length;
+        const active = currentStatusFilter === st;
+        return `
+          <button
+            onclick="setStatusFilter('${st}')"
+            class="shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold transition flex items-center gap-1.5 ${
+              active
+                ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-500/30'
+                : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800'
+            }"
+          >
+            <span>${st}</span>
+            <span class="px-1.5 py-0.2 rounded-full text-[10px] ${
+              active ? 'bg-indigo-500 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
+            }">${count}</span>
+          </button>
+        `;
+      }).join('');
+
+      // Filter by Status, Work Mode, and Search Query
+      const query = document.getElementById('searchInput').value.trim().toLowerCase();
+      document.getElementById('clearSearchBtn').classList.toggle('hidden', !query);
+      const placeFilter = document.getElementById('placeFilter').value;
+      const sortOrder = document.getElementById('sortOrder').value;
+
+      let filtered = applications.filter(app => {
+        const matchStatus = currentStatusFilter === 'All' || app.status === currentStatusFilter;
+        const matchPlace = placeFilter === 'All' || app.place === placeFilter;
+        const searchable = `${app.company} ${app.role} ${app.location} ${app.notes} ${app.source}`.toLowerCase();
+        const matchSearch = !query || searchable.includes(query);
+        return matchStatus && matchPlace && matchSearch;
+      });
+
+      // Sort Filtered Applications
+      filtered.sort((a, b) => {
+        if (sortOrder === 'company') return (a.company || '').localeCompare(b.company || '');
+        if (sortOrder === 'followup') {
+          if (!a.followUpDate) return 1;
+          if (!b.followUpDate) return -1;
+          return new Date(a.followUpDate) - new Date(b.followUpDate);
+        }
+        const dateA = new Date(a.timestamp || 0).getTime();
+        const dateB = new Date(b.timestamp || 0).getTime();
+        return sortOrder === 'oldest' ? dateA - dateB : dateB - dateA;
+      });
+
+      const listEl = document.getElementById('appList');
+      if (filtered.length === 0) {
+        listEl.innerHTML = `
+          <div class="bg-white dark:bg-slate-900 border border-dashed border-slate-300 dark:border-slate-800 rounded-2xl p-10 text-center space-y-3">
+            <div class="w-12 h-12 rounded-2xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-500 flex items-center justify-center mx-auto">
+              <i class="fa-solid fa-folder-open text-xl"></i>
+            </div>
+            <div>
+              <h3 class="font-bold text-slate-800 dark:text-slate-200 text-sm">No internship applications found</h3>
+              <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Tap the "+ Add Internship" button below to log your next application.</p>
+            </div>
+          </div>
+        `;
+        return;
+      }
+
+      listEl.innerHTML = filtered.map(app => {
+        const stStyle = STATUS_STYLES[app.status] || STATUS_STYLES.Applied;
+        const formattedTime = formatTimestamp(app.timestamp);
+        const sourceHtml = formatSourceLink(app.source);
+        const followUpHtml = formatFollowUpBadge(app.followUpDate);
+
+        return `
+          <article class="bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-2xl p-4 shadow-xs hover:border-indigo-300 dark:hover:border-indigo-800/80 transition space-y-3">
+            <!-- Top Row: Company, Role & One-Tap Status Select -->
+            <div class="flex items-start justify-between gap-2.5">
+              <div class="min-w-0">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <h3 class="font-bold text-base text-slate-900 dark:text-white truncate">${escapeHtml(app.company)}</h3>
+                  <span class="text-[11px] font-medium px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 shrink-0">
+                    ${PLACE_BADGES[app.place] || app.place}
+                  </span>
+                </div>
+                <p class="text-xs font-semibold text-indigo-600 dark:text-indigo-400 mt-0.5">${escapeHtml(app.role)}</p>
+              </div>
+
+              <!-- Quick Status Dropdown on Card -->
+              <div class="relative shrink-0">
+                <select
+                  aria-label="Update Status"
+                  onchange="quickUpdateStatus('${escapeHtml(app.id)}', this.value)"
+                  class="appearance-none cursor-pointer text-xs font-bold pl-2.5 pr-6 py-1.5 rounded-xl border ${stStyle.badge} focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                >
+                  ${STATUS_LIST.slice(1).map(s => `<option value="${s}" ${app.status === s ? 'selected' : ''}>${s}</option>`).join('')}
+                </select>
+                <i class="fa-solid fa-chevron-down text-[10px] absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none opacity-70"></i>
+              </div>
+            </div>
+
+            <!-- Metadata Chips: Location, Allowance, Applied Timestamp, Follow-Up -->
+            <div class="flex flex-wrap items-center gap-x-3.5 gap-y-1.5 text-xs text-slate-500 dark:text-slate-400">
+              <span class="inline-flex items-center gap-1">
+                <i class="fa-solid fa-location-dot text-rose-500/80"></i>
+                ${escapeHtml(app.location || 'Malaysia')}
+              </span>
+              ${app.allowance ? `
+                <span class="inline-flex items-center gap-1 font-medium text-emerald-600 dark:text-emerald-400">
+                  <i class="fa-solid fa-sack-dollar"></i>
+                  ${escapeHtml(app.allowance)}
+                </span>
+              ` : ''}
+              <span class="inline-flex items-center gap-1" title="Applied Timestamp">
+                <i class="fa-regular fa-clock"></i>
+                ${formattedTime}
+              </span>
+              ${followUpHtml}
+            </div>
+
+            <!-- Notes Box (if present) -->
+            ${app.notes ? `
+              <div class="text-xs bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800/80 rounded-xl p-2.5 text-slate-600 dark:text-slate-300 leading-relaxed">
+                ${escapeHtml(app.notes)}
+              </div>
+            ` : ''}
+
+            <!-- Card Footer: Portal/Source Link & Edit/Delete Buttons -->
+            <div class="pt-1 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between gap-2 text-xs">
+              <div class="truncate">
+                ${sourceHtml}
+              </div>
+              <div class="flex items-center gap-1 shrink-0">
+                <button
+                  onclick="openAppModal('${escapeHtml(app.id)}')"
+                  class="px-2.5 py-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 font-medium transition flex items-center gap-1"
+                >
+                  <i class="fa-regular fa-pen-to-square text-indigo-500"></i>
+                  <span>Edit</span>
+                </button>
+                <button
+                  onclick="promptDelete('${escapeHtml(app.id)}')"
+                  class="px-2.5 py-1.5 rounded-lg text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/50 font-medium transition flex items-center gap-1"
+                >
+                  <i class="fa-regular fa-trash-can"></i>
+                  <span>Delete</span>
+                </button>
+              </div>
+            </div>
+          </article>
+        `;
+      }).join('');
+    }
+
+    // =========================================================================
+    // FORMATTING HELPERS
+    // =========================================================================
+    function escapeHtml(str) {
+      return String(str || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    function formatTimestamp(ts) {
+      if (!ts) return 'No date';
+      const d = new Date(ts);
+      if (isNaN(d.getTime())) return escapeHtml(ts);
+      return d.toLocaleDateString('en-MY', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric'
+      }) + ', ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+
+    function formatFollowUpBadge(dateStr) {
+      if (!dateStr) return '';
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return '';
+      const label = d.toLocaleDateString('en-MY', { day: '2-digit', month: 'short' });
+      return `
+        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 font-medium">
+          <i class="fa-regular fa-calendar-check"></i>
+          Action: ${label}
+        </span>
+      `;
+    }
+
+    function formatSourceLink(source) {
+      if (!source) return `<span class="text-slate-400 dark:text-slate-600">No link attached</span>`;
+      const trimmed = source.trim();
+      if (/^https?:\/\//i.test(trimmed)) {
+        return `<a href="${escapeHtml(trimmed)}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 text-indigo-600 dark:text-indigo-400 font-medium hover:underline">
+          <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+          <span>Open Job Link</span>
+        </a>`;
+      }
+      if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
+        return `<a href="mailto:${escapeHtml(trimmed)}" class="inline-flex items-center gap-1.5 text-indigo-600 dark:text-indigo-400 font-medium hover:underline">
+          <i class="fa-regular fa-envelope text-[11px]"></i>
+          <span>${escapeHtml(trimmed)}</span>
+        </a>`;
+      }
+      return `<span class="text-slate-500 dark:text-slate-400"><i class="fa-solid fa-link text-[10px] mr-1"></i>${escapeHtml(trimmed)}</span>`;
+    }
+
+    // =========================================================================
+    // CRUD OPERATIONS (ADD, EDIT, QUICK STATUS, DELETE)
+    // =========================================================================
+    function setStatusFilter(status) {
+      currentStatusFilter = status;
+      renderApplications();
+    }
+
+    function clearSearch() {
+      document.getElementById('searchInput').value = '';
+      renderApplications();
+    }
+
+    function clearSampleData() {
+      applications = applications.filter(a => !String(a.id).startsWith('sample-'));
+      saveLocal();
+      showToast('Sample data cleared!', 'info');
+    }
+
+    function openAppModal(editId = null) {
+      const modal = document.getElementById('appModal');
+      const form = document.getElementById('appForm');
+      const title = document.getElementById('modalTitle');
+      form.reset();
+
+      if (editId) {
+        const app = applications.find(a => String(a.id) === String(editId));
+        if (!app) return;
+        title.textContent = 'Edit Internship Application';
+        document.getElementById('appId').value = app.id;
+        document.getElementById('company').value = app.company || '';
+        document.getElementById('role').value = app.role || '';
+        document.getElementById('location').value = app.location || '';
+        document.getElementById('place').value = app.place || 'On-site';
+        document.getElementById('status').value = app.status || 'Applied';
+        document.getElementById('allowance').value = app.allowance || '';
+        document.getElementById('source').value = app.source || '';
+        document.getElementById('followUpDate').value = app.followUpDate || '';
+        document.getElementById('notes').value = app.notes || '';
+        document.getElementById('timestampInput').value = toDateTimeLocal(app.timestamp);
+      } else {
+        title.textContent = 'Add Internship Application';
+        document.getElementById('appId').value = '';
+        document.getElementById('timestampInput').value = toDateTimeLocal(new Date().toISOString());
+      }
+
+      modal.classList.remove('hidden');
+    }
+
+    function closeAppModal() {
+      document.getElementById('appModal').classList.add('hidden');
+    }
+
+    function toDateTimeLocal(dateVal) {
+      const d = dateVal ? new Date(dateVal) : new Date();
+      if (isNaN(d.getTime())) return '';
+      const pad = n => String(n).padStart(2, '0');
+      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    }
+
+    async function handleFormSubmit(e) {
+      e.preventDefault();
+      const existingId = document.getElementById('appId').value;
+      const isEdit = Boolean(existingId);
+
+      const entry = {
+        id: existingId || 'app-' + Date.now(),
+        company: document.getElementById('company').value.trim(),
+        role: document.getElementById('role').value.trim(),
+        location: document.getElementById('location').value.trim(),
+        place: document.getElementById('place').value,
+        status: document.getElementById('status').value,
+        allowance: document.getElementById('allowance').value.trim(),
+        timestamp: document.getElementById('timestampInput').value || new Date().toISOString(),
+        followUpDate: document.getElementById('followUpDate').value,
+        source: document.getElementById('source').value.trim(),
+        notes: document.getElementById('notes').value.trim()
+      };
+
+      if (isEdit) {
+        const idx = applications.findIndex(a => String(a.id) === String(existingId));
+        if (idx > -1) applications[idx] = entry;
+      } else {
+        applications.unshift(entry);
+      }
+
+      saveLocal();
+      closeAppModal();
+      showToast(isEdit ? 'Application updated!' : 'Application saved!', 'success');
+
+      await sendToGoogleSheet({
+        action: isEdit ? 'edit' : 'add',
+        ...entry
+      });
+    }
+
+    async function quickUpdateStatus(id, newStatus) {
+      const app = applications.find(a => String(a.id) === String(id));
+      if (!app) return;
+      app.status = newStatus;
+      saveLocal();
+      showToast(`Status updated to ${newStatus}`, 'success');
+
+      await sendToGoogleSheet({
+        action: 'updateStatus',
+        id: app.id,
+        status: newStatus
+      });
+    }
+
+    function promptDelete(id) {
+      const app = applications.find(a => String(a.id) === String(id));
+      if (!app) return;
+      pendingDeleteId = id;
+      document.getElementById('deleteModalSub').textContent = `Remove "${app.company} (${app.role})" from your tracker?`;
+      document.getElementById('deleteModal').classList.remove('hidden');
+
+      document.getElementById('confirmDeleteBtn').onclick = async () => {
+        applications = applications.filter(a => String(a.id) !== String(pendingDeleteId));
+        saveLocal();
+        closeDeleteModal();
+        showToast('Application deleted', 'info');
+        await sendToGoogleSheet({ action: 'delete', id: pendingDeleteId });
+      };
+    }
+
+    function closeDeleteModal() {
+      pendingDeleteId = null;
+      document.getElementById('deleteModal').classList.add('hidden');
+    }
+
+    // =========================================================================
+    // GOOGLE SHEETS SETTINGS MODAL & COPY APPS SCRIPT
+    // =========================================================================
+    function openSettingsModal(tab = 'connection') {
+      document.getElementById('scriptUrlInput').value = scriptUrl;
+      switchSettingsTab(tab);
+      document.getElementById('settingsModal').classList.remove('hidden');
+    }
+
+    function closeSettingsModal() {
+      document.getElementById('settingsModal').classList.add('hidden');
+    }
+
+    function switchSettingsTab(tab) {
+      const isConn = tab === 'connection';
+      document.getElementById('tabConnection').classList.toggle('hidden', !isConn);
+      document.getElementById('tabGuide').classList.toggle('hidden', isConn);
+
+      document.getElementById('tabBtnConnection').className = isConn
+        ? 'py-3 border-b-2 border-indigo-600 text-indigo-600 dark:text-indigo-400 dark:border-indigo-400'
+        : 'py-3 border-b-2 border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300';
+
+      document.getElementById('tabBtnGuide').className = !isConn
+        ? 'py-3 border-b-2 border-indigo-600 text-indigo-600 dark:text-indigo-400 dark:border-indigo-400'
+        : 'py-3 border-b-2 border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300';
+    }
+
+    function saveScriptUrl() {
+      const val = document.getElementById('scriptUrlInput').value.trim();
+      if (!val) {
+        showToast('Please enter a valid Google Apps Script URL', 'error');
+        return;
+      }
+      scriptUrl = val;
+      localStorage.setItem(SCRIPT_URL_KEY, scriptUrl);
+      updateSyncStatusUI();
+      closeSettingsModal();
+      showToast('Connected to Google Sheets!', 'success');
+      syncFromGoogleSheet(true);
+    }
+
+    function disconnectScriptUrl() {
+      scriptUrl = '';
+      localStorage.removeItem(SCRIPT_URL_KEY);
+      document.getElementById('scriptUrlInput').value = '';
+      updateSyncStatusUI();
+      showToast('Switched to Local Phone Storage mode', 'info');
+    }
+
+    function copyAppsScriptCode() {
+      const code = document.getElementById('appsScriptCodeBlock').innerText;
+      const textarea = document.createElement('textarea');
+      textarea.value = code;
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      textarea.remove();
+
+      const btnText = document.getElementById('copyCodeBtnText');
+      btnText.textContent = 'Copied!';
+      showToast('Google Apps Script code copied to clipboard!', 'success');
+      setTimeout(() => {
+        btnText.textContent = 'Copy Script Code';
+      }, 2000);
+    }
+
+    // =========================================================================
+    // CSV EXPORT
+    // =========================================================================
+    function exportToCSV() {
+      if (!applications.length) {
+        showToast('No applications to export!', 'error');
+        return;
+      }
+      const headers = ['ID', 'Apply Timestamp', 'Company', 'Role', 'Location', 'Work Mode (Place)', 'Status', 'Allowance', 'Source / Link', 'Follow-Up Date', 'Notes'];
+      const rows = applications.map(a => [
+        a.id, a.timestamp, a.company, a.role, a.location, a.place, a.status, a.allowance, a.source, a.followUpDate || '', a.notes
+      ].map(v => `"${String(v || '').replace(/"/g, '""')}"`).join(','));
+
+      const csvContent = [headers.join(','), ...rows].join('\n');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `internship_applications_${new Date().toISOString().slice(0, 10)}.csv`;
+      link.click();
+      showToast('CSV downloaded!', 'success');
+    }
+
+    window.onload = initApp;
+  </script>
+</body>
+</html>
